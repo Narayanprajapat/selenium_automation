@@ -259,8 +259,8 @@ def send_mail(driver: root_driv, subject_text: str, message_text: str):
 
 
 def main():
-    user = 'ramon@intelatek.co'
-    pass_ = 'HunterProSP'
+    user = ''
+    pass_ = ''
     print(user, pass_)
     driver = login_to_linkedidn(user, pass_)
     print("login successful")
