@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
+import pickle
 
 # from dotenv import load_dotenv
 from enum import Enum
@@ -262,12 +263,24 @@ def main():
     user = ''
     pass_ = ''
     print(user, pass_)
-    driver = login_to_linkedidn(user, pass_)
-    print("login successful")
-    wait_between(10, 15)
-    if is_verfication_code_page(driver):
-      submit_verification_code(driver)    
-    wait_between(3, 6)
+    
+    file_path = "driver.pickle"
+    
+    # Later, you can load the WebDriver instance back
+    if os.path.exists(file_path):
+      with open(file_path, "rb") as f:
+        driver = pickle.load(f)
+    else:
+      driver = login_to_linkedidn(user, pass_)
+      print("login successful")
+      wait_between(10, 15)
+      if is_verfication_code_page(driver):
+        submit_verification_code(driver)    
+      wait_between(3, 6)
+      
+      # Save the WebDriver instance using pickling
+      with open(file_path, "wb") as f: 
+        pickle.dump(driver, f)
     
     redirect_recuiter_page(driver)
     wait_between(1, 3)
