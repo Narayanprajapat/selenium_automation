@@ -1,5 +1,6 @@
 import os
 import time
+import json
 from selenium.webdriver.remote.webdriver import WebDriver as root_driv
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -124,9 +125,14 @@ def get_otp():
  
 @wait_and_retry
 def is_verfication_code_page(driver: root_driv)->bool:
-  h1 = driver.find_element(By.CLASS_NAME, 'content__header')
-  if "Enter the code we've sent to phone number" in h1.text:
-    return True
+  try:
+    h1 = driver.find_element(By.CLASS_NAME, 'content__header')
+    if "Enter the code we've sent to phone number" in h1.text:
+      print("Verification page found")
+      return True
+  except NoSuchElementException as e:
+    print("No such eleent found while find is verfication code", e)
+  print("Verification page not found")
   return False
 
 @wait_and_retry
@@ -265,23 +271,44 @@ def main():
     print(user, pass_)
     
     file_path = "driver.pickle"
+    file_path1 = "driver_info.json"
     
     # Later, you can load the WebDriver instance back
-    if os.path.exists(file_path):
-      with open(file_path, "rb") as f:
-        driver = pickle.load(f)
+    if os.path.exists(file_path1):
+      # with open(file_path, "rb") as f:
+      #   driver = pickle.load(f)
+      with open("driver_info.json", "r") as f:
+        loaded_driver_info = json.load(f)
+
+      driver = webdriver.Chrome()
+      driver.get(loaded_driver_info["current_url"])
+      for cookie in loaded_driver_info["cookies"]:
+        driver.add_cookie(cookie)
+      
+      
     else:
       driver = login_to_linkedidn(user, pass_)
       print("login successful")
       wait_between(10, 15)
+      print("time end")
       if is_verfication_code_page(driver):
         submit_verification_code(driver)    
       wait_between(3, 6)
+      print("Writing pickle file")
+      
+      driver_info = {
+        "current_url": driver.current_url,
+        "cookies": driver.get_cookies()
+      }
+
+      with open(file_path1, "w") as f:
+        json.dump(driver_info, f)
+      
       
       # Save the WebDriver instance using pickling
-      with open(file_path, "wb") as f: 
-        pickle.dump(driver, f)
-    
+      # with open(file_path, "wb") as f: 
+        # pickle.dump(driver, f)
+    driver.get("https://www.linkedin.com/feed")
     redirect_recuiter_page(driver)
     wait_between(1, 3)
     
