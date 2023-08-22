@@ -5,19 +5,23 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 from enum import Enum
 from utils import wait_between
 
-load_dotenv()
+# load_dotenv()
 
-DRIVER_PATH = f"""/home/shailesh/try/chromedriver"""
+DRIVER_PATH = r'chromedriver'
 
 LINKEDIN_URL = f"""https://www.linkedin.com"""
 LINKEDIN_FEED_URL = f"""{LINKEDIN_URL}/feed"""
 LINKEDIN_CONNECTION_LIST_URL = (
     f"""{LINKEDIN_URL}/mynetwork/invite-connect/connections/"""
 )
+
+
+url1 = "https://www.linkedin.com/search/results/people/?origin=SWITCH_SEARCH_VERTICAL&sid=*(u"
+
 
 WAIT_TIME_FOR_ELEMENT_LOAD = 20
 MAX_RETRY = 3
@@ -48,8 +52,9 @@ def _load_chrome_driver(
     for option in options:
         chrome_options.add_argument(option.value)
 
-    service = Service(executable_path=driver_path)
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # service = Service(executable_path=driver_path)
+    # driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Firefox()
     driver.implicitly_wait(WAIT_TIME_FOR_ELEMENT_LOAD)
     return driver
 
@@ -122,14 +127,41 @@ def send_message(message: str, driver: root_driv):
     pass
 
 
+@wait_and_retry
+def send_message_to_connection(message: str, driver: root_driv):
+    driver.get(url1)
+    print("redirect successful")
+    wait_between(2, 5)
+    all_buttons = driver.find_elements(By.TAG_NAME, "button")
+    message_buttons = [btn for btn in all_buttons if btn.text == "Message"]
+
+    message_buttons[0].click()
+    
+    main_div = driver.find_element(By.XPATH, "//div[starts-with(@class, 'msg-form__msg-content-container')]")
+    
+    main_div.click()
+    
+    paragraphs = driver.find_elements(By.TAG_NAME, "p")
+    
+    paragraphs[-5].send_keys(message)
+
+    submit = driver.find_element(By.XPATH, "//button[@type='submit']")
+    submit.click()
+    wait_between(2, 4)
+    
+    close_button = driver.find_element(By.XPATH, "//button[starts-with(@data-control-name, 'overlay.close_conversation_window')]")
+
+    close_button.click()
+
 def main():
-    user = os.getenv("LINKEDIN_USER")
-    pass_ = os.getenv("LINKEDIN_PASSWORD")
+    user = 'narayan.idstats@gmail.com'
+    pass_ = '1999@Kapil'
+    print(user, pass_)
     driver = login_to_linkedidn(user, pass_)
     print("login successful")
-    driver.get(LINKEDIN_FEED_URL)
+    # driver.get(LINKEDIN_FEED_URL)
     wait_between(10, 15)
-    send_message("P", driver=driver)
+    send_message_to_connection("test", driver=driver)
 
 
 if __name__ == "__main__":
