@@ -59,7 +59,7 @@ def _load_chrome_driver(
     for option in options:
         chrome_options.add_argument(option.value)
 
-    # service = Service(executable_path=driver_path)
+    service = Service(executable_path=driver_path)
     # driver = webdriver.Chrome(service=service, options=chrome_options)
     driver = webdriver.Chrome()
     driver.implicitly_wait(WAIT_TIME_FOR_ELEMENT_LOAD)
@@ -238,46 +238,122 @@ def search_people(name: str, driver: root_driv):
   
 
 @wait_and_retry
-def send_mail(driver: root_driv, subject_text: str, message_text: str):
+def send_mail(name:str, title:str, driver: root_driv, subject_text: str, message_text: str):
   message_buttons = driver.find_elements(By.XPATH, '//*[@data-live-test-component="message-icon-btn"]')
   
   
   for message_button in message_buttons:
     message_button.click()
     wait_between(1, 2)
+    _name = driver.find_element(By.CLASS_NAME, "artdeco-entity-lockup__title")
+    print(_name.text)
+    _title = driver.find_element(By.CLASS_NAME, "artdeco-entity-lockup__subtitle")
+    print(_title.text)
+    is_title_match = title in _title.text
+    is_name_match = name in _name.text
     
-    subject = driver.find_element(By.CLASS_NAME, "compose-subject__input")
-    subject.send_keys(subject_text)    
-    wait_between(1, 2)
-    
-    message = driver.find_element(By.CLASS_NAME, "compose-textarea__textarea")
-    message.send_keys(message_text)
-    
-    wait_between(2, 4)
-    send_button = driver.find_element(By.CLASS_NAME, "compose-actions__submit-button")
-    # send_button.click()
-    
-    close = driver.find_element(By.CLASS_NAME, "inmail-component__button-tertiary-muted")
-    close.click()
-    break
-    
+    if is_name_match and is_title_match:
+      subject = driver.find_element(By.CLASS_NAME, "compose-subject__input")
+      subject.send_keys(subject_text)    
+      wait_between(1, 2)
+      
+      message = driver.find_element(By.CLASS_NAME, "compose-textarea__textarea")
+      message.send_keys(message_text)
+      
+      wait_between(2, 4)
+      send_button = driver.find_element(By.CLASS_NAME, "compose-actions__submit-button")
+      # send_button.click()
+      wait_between(2,4)
+      close = driver.find_element(By.CLASS_NAME, "inmail-component__button-tertiary-muted")
+      close.click()
+      break
+      
   return driver
 
+@wait_and_retry
+def check_talent_signup_page(driver: root_driv)-> bool:
+  try:
+    h1 = driver.find_element(By.TAG_NAME, 'h1')
+    if "Sign in to LinkedIn Talent Solutions" not in h1.text:
+      return False
+  except NoSuchElementException as se:
+    pass
+  
+  return True
+  
+  
+@wait_and_retry
+def login_into_talent_page(driver: root_driv, username:str, password:str):
+  try:
+    username_element = driver.find_element(By.ID, "username")
+    username_element.send_keys(username)
+    wait_between(1,2)
+    password_element = driver.find_element(By.ID, "password")
+    password_element.send_keys(password)
+    wait_between(1,2)
+    submit = driver.find_element(By.CLASS_NAME, "from__button--floating")
+    submit.click()
+  except Exception as e:
+    pass
+
+@wait_and_retry
+def fetch_inbox_message_user(driver: root_driv, name: str):
+  users = driver.find_elements(By.CLASS_NAME, "_conversation-card-title-row_z8knzq")
+  
+  for user in users:
+    user_name = user.find_element(By.CLASS_NAME, "_conversation-card-participant-name_z8knzq")
+    
+    if name in user_name.text:
+      user.click()
+      return True
+  return False
+  
+  
+
+
+@wait_and_retry
+def fetch_previous_chat(driver: root_driv):
+  message_record_list = []
+  message_container_list = driver.find_elements(By.CLASS_NAME,
+  "_message-list-item_1gj1uc")
+  
+  for message_container in message_container_list:
+    message_info = message_container.find_element(By.CLASS_NAME, "a11y-message-thread")
+    name_and_date = message_info.find_element(By.CLASS_NAME, "_message-metadata_1gj1uc")
+    
+    message_name = name_and_date.find_element(By.CLASS_NAME, "_headingText_e3b563")
+    
+    message_date = name_and_date.find_element(By.CLASS_NAME, "_lineHeightOpen_1e5nen")
+    
+    message_value = message_info.find_element(By.CLASS_NAME, "_message-body_content_1gj1uc")
+
+    # message_value = paragraph.find_element(By.XPATH, "//following-sibling::div")
+    
+    message_record = {
+      "name": message_name.text, 
+      "date": message_date.text, 
+      "value": message_value.text
+    }
+    
+    message_record_list.append(message_record)
+    
+  return message_record_list  
 
 
 def main():
-    user = ''
-    pass_ = ''
+    user = 'ramon@intelatek.co'
+    pass_ = 'HunterProSP'
+    
     print(user, pass_)
     
     file_path = "driver.pickle"
-    file_path1 = "driver_info.json"
+    file_path1 = "ramon_driver_info.json"
     
     # Later, you can load the WebDriver instance back
     if os.path.exists(file_path1):
       # with open(file_path, "rb") as f:
       #   driver = pickle.load(f)
-      with open("driver_info.json", "r") as f:
+      with open(file_path1, "r") as f:
         loaded_driver_info = json.load(f)
 
       driver = webdriver.Chrome()
@@ -310,16 +386,38 @@ def main():
         # pickle.dump(driver, f)
     driver.get("https://www.linkedin.com/feed")
     redirect_recuiter_page(driver)
-    wait_between(1, 3)
+    wait_between(5, 10)
+    
+    if check_talent_signup_page(driver=driver):
+      login_into_talent_page(driver=driver, username=user, password=pass_)
+    
     
     if is_choose_a_contract_page(driver):
       choose_a_contract(driver)
       
     wait_between(2, 4)
-    search_people(name="Narayan Prajapat", driver=driver)
+    name = "Narayan Prajapat"
+    search_people(name=name, driver=driver)
     wait_between(2, 4)
-    send_mail(subject_text="Job opening", message_text="Openings", driver=driver)
+    
+    
+    
+    driver.get("https://www.linkedin.com/talent/inbox/0/main")
+    
+    
+    if fetch_inbox_message_user(driver=driver, name="Shailesh Pandit"):
+      res = fetch_previous_chat(driver=driver)
+      print(res)
+    
+    message_text = """
+      Hii Narayan, I hope you are doing well. Let me know if you are open to new opportunities.
+    """
+    
+    title = "SDE at SignalX.ai |ExIdeal"
+    
+    # send_mail(name=name, title=title,subject_text="Regarding New Opportunities", message_text=message_text, driver=driver)
 
+    wait_between(300, 600)
 
 if __name__ == "__main__":
     main()
